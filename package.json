@@ -1,0 +1,23 @@
+{
+  "name": "travel-planner",
+  "version": "1.0.0",
+  "description": "Projekt umożliwia wprowadzanie informacji o podróży i wyświetlanie  informacji o pogodzie za pomocą API REST.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xAdamx89/travel-planner.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/xAdamx89/travel-planner/issues"
+  },
+  "homepage": "https://github.com/xAdamx89/travel-planner#readme",
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.11.2"
+  }
+}
