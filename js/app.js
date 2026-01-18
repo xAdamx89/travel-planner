@@ -138,8 +138,13 @@ function renderGrid() {
             const events = getEventsForDate(dateStr, hour);
             let eventsHtml = "";
             
-            events.forEach(event => {
-                eventsHtml += `<div class="event ${event.type}">${event.text}</div>`;
+            events.forEach((event, index) => {
+                const displayText = `
+                    ${event.city}<br>
+                    ${event.country}
+                    ${event.cost ? `<br>${event.cost} PLN` : ''}
+                `;
+                eventsHtml += `<div class="event ${event.type}" data-event-index="${index}" title="${event.weather || 'Pogoda: --'}">${displayText}</div>`;
             });
 
             grid.innerHTML += `
@@ -189,54 +194,46 @@ function attachWeekButtons() {
 
 let tripModal = null;
 let selectedCell = null;
+let isEditMode = false;
+let editDate = '';
+let editHour = '';
+let editIndex = -1;
 
 function attachCellClickHandlers() {
     const cells = document.querySelectorAll(".cell");
     
     cells.forEach(cell => {
         cell.addEventListener("click", (e) => {
-            // Ignoruj kliknięcie jeśli kliknięto na istniejące wydarzenie
             if (e.target.classList.contains("event")) {
+                // Tryb edycji - kliknięto istniejący event
+                handleEventClick(e.target);
                 return;
             }
             
-            selectedCell = cell;
-            const date = cell.dataset.date;
-            const hour = cell.dataset.hour;
-            
-            // Ustaw wartości w formularzu
-            document.getElementById("tripDate").value = date;
-            document.getElementById("tripHour").value = hour;
-            
-            // Wyczyść formularz
-            document.getElementById("tripForm").reset();
-            document.getElementById("tripDate").value = date;
-            document.getElementById("tripHour").value = hour;
-            
-            // Ustaw placeholder pogody
-            document.getElementById("tripWeather").value = "Ładowanie...";
-            document.getElementById("weatherIcon").textContent = "🔄";
-            
-            // Aktualizuj tytuł modalu z datą i godziną
-            const formattedDate = new Date(date).toLocaleDateString("pl-PL", {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-            });
-            document.getElementById("tripModalLabel").textContent = 
-                `✈️ Dodaj wycieczkę - ${formattedDate}, ${hour}`;
-            
-            // Otwórz modal
-            if (!tripModal) {
-                tripModal = new bootstrap.Modal(document.getElementById("tripModal"));
-            }
-            tripModal.show();
-            
-            // Symulacja ładowania pogody (placeholder do późniejszego uzupełnienia)
-            simulateWeatherFetch();
+            // Tryb dodawania - pusta komórka
+            handleCellClick(cell);
         });
     });
+}
+
+function handleCellClick(cell) {
+    selectedCell = cell;
+    const date = cell.dataset.date;
+    const hour = cell.dataset.hour;
+    
+    openModalForAdd(date, hour);
+}
+
+function handleEventClick(eventEl) {
+    const cell = eventEl.closest('.cell');
+    editDate = cell.dataset.date;
+    editHour = cell.dataset.hour;
+    editIndex = parseInt(eventEl.dataset.eventIndex);
+    
+    const eventData = getEventData(editDate, editHour, editIndex);
+    if (!eventData) return;
+    
+    openModalForEdit(eventData);
 }
 
 function simulateWeatherFetch() {
@@ -252,11 +249,88 @@ function simulateWeatherFetch() {
     }, 500);
 }
 
+function getEventData(dateStr, hour, index) {
+    if (eventsData[dateStr] && eventsData[dateStr][hour] && eventsData[dateStr][hour][index]) {
+        return eventsData[dateStr][hour][index];
+    }
+    return null;
+}
+
+function openModalForAdd(date, hour) {
+    isEditMode = false;
+    document.getElementById("editMode").value = "0";
+    document.getElementById("eventIndex").value = "";
+    document.getElementById("deleteTripBtn").style.display = "none";
+    
+    document.getElementById("tripDate").value = date;
+    document.getElementById("tripHour").value = hour;
+    
+    document.getElementById("tripForm").reset();
+    document.getElementById("tripDate").value = date;
+    document.getElementById("tripHour").value = hour;
+    
+    document.getElementById("tripWeather").value = "Ładowanie...";
+    document.getElementById("weatherIcon").textContent = "🔄";
+    
+    const formattedDate = new Date(date).toLocaleDateString("pl-PL", {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
+    document.getElementById("tripModalLabel").textContent = 
+        `✈️ Dodaj wycieczkę - ${formattedDate}, ${hour}`;
+    
+    if (!tripModal) {
+        tripModal = new bootstrap.Modal(document.getElementById("tripModal"));
+    }
+    tripModal.show();
+    
+    simulateWeatherFetch();
+}
+
+function openModalForEdit(eventData) {
+    isEditMode = true;
+    document.getElementById("editMode").value = "1";
+    document.getElementById("eventIndex").value = editIndex;
+    document.getElementById("deleteTripBtn").style.display = "inline-block";
+    
+    document.getElementById("tripDate").value = editDate;
+    document.getElementById("tripHour").value = editHour;
+    
+    document.getElementById("tripCountry").value = eventData.country;
+    document.getElementById("tripCity").value = eventData.city;
+    document.getElementById("tripCost").value = eventData.cost || "";
+    document.getElementById("tripWeather").value = eventData.weather || "";
+    
+    // Ustaw kolor
+    document.querySelector(`input[name="tripColor"][value="${eventData.type}"]`).checked = true;
+    
+    const formattedDate = new Date(editDate).toLocaleDateString("pl-PL", {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
+    document.getElementById("tripModalLabel").textContent = 
+        `✈️ Edytuj wycieczkę - ${formattedDate}, ${editHour}`;
+    
+    if (!tripModal) {
+        tripModal = new bootstrap.Modal(document.getElementById("tripModal"));
+    }
+    tripModal.show();
+}
+
 function attachSaveButton() {
     const saveBtn = document.getElementById("saveTripBtn");
+    const deleteBtn = document.getElementById("deleteTripBtn");
     
     if (saveBtn) {
         saveBtn.addEventListener("click", saveTrip);
+    }
+    
+    if (deleteBtn) {
+        deleteBtn.addEventListener("click", deleteTrip);
     }
 }
 
@@ -275,35 +349,60 @@ function saveTrip() {
         return;
     }
     
-    // Utwórz obiekt wydarzenia
-    const newEvent = {
+    const eventData = {
         type: color,
-        text: `${city}<br>${country}`,
         country: country,
         city: city,
         cost: cost ? parseFloat(cost) : 0,
         weather: weather
     };
     
-    // Dodaj do danych wydarzeń
-    if (!eventsData[date]) {
-        eventsData[date] = {};
+    if (isEditMode) {
+        // Edycja
+        if (!eventsData[date]) eventsData[date] = {};
+        if (!eventsData[date][hour]) eventsData[date][hour] = [];
+        eventsData[date][hour][editIndex] = eventData;
+        showToast(`Wycieczka do ${city}, ${country} została zaktualizowana!`);
+    } else {
+        // Dodawanie
+        if (!eventsData[date]) eventsData[date] = {};
+        if (!eventsData[date][hour]) eventsData[date][hour] = [];
+        eventsData[date][hour].push(eventData);
+        showToast(`Wycieczka do ${city}, ${country} została dodana!`);
     }
-    if (!eventsData[date][hour]) {
-        eventsData[date][hour] = [];
-    }
-    eventsData[date][hour].push(newEvent);
     
     // Zapisz do localStorage
     saveEventsToStorage();
     
-    // Zamknij modal i odśwież kalendarz
+    // Zamknij modal i odśwież
     tripModal.hide();
     renderCalendar();
     attachCellClickHandlers();
-    
-    // Pokaż potwierdzenie
-    showToast(`Wycieczka do ${city}, ${country} została dodana!`);
+    attachSaveButton();
+}
+
+function deleteTrip() {
+    if (confirm("Na pewno usunąć tę wycieczkę?")) {
+        if (eventsData[editDate] && eventsData[editDate][editHour]) {
+            eventsData[editDate][editHour].splice(editIndex, 1);
+            
+            // Usuń puste obiekty
+            if (eventsData[editDate][editHour].length === 0) {
+                delete eventsData[editDate][editHour];
+            }
+            if (Object.keys(eventsData[editDate]).length === 0) {
+                delete eventsData[editDate];
+            }
+        }
+        
+        saveEventsToStorage();
+        tripModal.hide();
+        renderCalendar();
+        attachCellClickHandlers();
+        attachSaveButton();
+        
+        showToast("Wycieczka została usunięta!");
+    }
 }
 
 /***************************
