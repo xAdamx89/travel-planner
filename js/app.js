@@ -1,32 +1,29 @@
 /***************************
  * LOAD PARTIALS
  ***************************/
-
-// Sidebar
-fetch("partials/sidebar.html")
-    .then(res => {
-        if (!res.ok) throw new Error("Sidebar not found");
-        return res.text();
-    })
+fetch("partials/tripModal.html")
+    .then(res => res.text())
     .then(html => {
-        document.getElementById("sidebar-container").innerHTML = html;
+        document.getElementById("tripModalContainer").innerHTML = html;
+        // Po wczytaniu modalu możesz już go używać
+        attachSaveButton(); // przypnij eventy przycisków
     })
-    .catch(err => console.error("Error loading sidebar:", err));
+    .catch(err => console.error("Error loading modal:", err));
 
-// Calendar
+fetch("partials/sidebar.html")
+    .then(res => res.text())
+    .then(html => document.getElementById("sidebar-container").innerHTML = html);
+
 fetch("partials/calendar.html")
-    .then(res => {
-        if (!res.ok) throw new Error("Calendar not found");
-        return res.text();
-    })
+    .then(res => res.text())
     .then(html => {
         document.getElementById("calendar-container").innerHTML = html;
         renderCalendar();
         attachWeekButtons();
         attachCellClickHandlers();
         attachSaveButton();
-    })
-    .catch(err => console.error("Error loading calendar:", err));
+    });
+
 
 /***************************
  * DATE LOGIC
