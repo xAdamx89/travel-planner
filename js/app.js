@@ -18,10 +18,11 @@ fetch("partials/calendar.html")
     .then(res => res.text())
     .then(html => {
         document.getElementById("calendar-container").innerHTML = html;
-        renderCalendar();
-        attachWeekButtons();
-        attachCellClickHandlers();
-        attachSaveButton();
+
+        renderCalendar();          // rysowanie nagłówka i siatki
+        attachWeekButtons();       // przypięcie przycisków prev/next
+        attachCellClickHandlers(); // przypięcie kliknięć w komórki
+        attachSaveButton();        // przypięcie przycisku zapisu modal
     });
 
 
