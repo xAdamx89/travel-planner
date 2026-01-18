@@ -136,14 +136,19 @@ function renderGrid() {
             const events = getEventsForDate(dateStr, hour);
             let eventsHtml = "";
             
-            events.forEach((event, index) => {
-                const displayText = `
-                    ${event.city}<br>
-                    ${event.country}
-                    ${event.cost ? `<br>${event.cost} PLN` : ''}
-                `;
-                eventsHtml += `<div class="event ${event.type}" data-event-index="${index}" title="${event.weather || 'Pogoda: --'}">${displayText}</div>`;
-            });
+        events.forEach((event, index) => {
+            const displayText = `
+                ${event.city}<br>
+                ${event.country}
+                ${event.cost ? `<br>${event.cost} PLN` : ''}
+            `;
+
+            eventsHtml += `
+                <div class="event ${event.type}" data-event-index="${index}">
+                    ${displayText}
+                </div>
+            `;
+        });
 
             grid.innerHTML += `
                 <div class="cell"
@@ -234,18 +239,18 @@ function handleEventClick(eventEl) {
     openModalForEdit(eventData);
 }
 
-function simulateWeatherFetch() {
-    // TODO: Tu później dodać prawdziwe API pogodowe
-    // Na razie symulacja z placeholder
-    setTimeout(() => {
-        const weatherIcon = document.getElementById("weatherIcon");
-        const weatherInput = document.getElementById("tripWeather");
+// function simulateWeatherFetch() {
+//     // TODO: Tu później dodać prawdziwe API pogodowe
+//     // Na razie symulacja z placeholder
+//     // setTimeout(() => {
+//     //     const weatherIcon = document.getElementById("weatherIcon");
+//     //     const weatherInput = document.getElementById("tripWeather");
         
-        // Placeholder - do uzupełnienia prawdziwym API
-        weatherInput.value = "-- °C (uzupełnij później)";
-        weatherIcon.textContent = "🌡️";
-    }, 500);
-}
+//     //     // Placeholder - do uzupełnienia prawdziwym API
+//     //     weatherInput.value = "-- °C (uzupełnij później)";
+//     //     weatherIcon.textContent = "🌡️";
+//     // }, 500);
+// }
 
 function getEventData(dateStr, hour, index) {
     if (eventsData[dateStr] && eventsData[dateStr][hour] && eventsData[dateStr][hour][index]) {
@@ -267,9 +272,6 @@ function openModalForAdd(date, hour) {
     document.getElementById("tripDate").value = date;
     document.getElementById("tripHour").value = hour;
     
-    document.getElementById("tripWeather").value = "Ładowanie...";
-    document.getElementById("weatherIcon").textContent = "🔄";
-    
     const formattedDate = new Date(date).toLocaleDateString("pl-PL", {
         weekday: 'long',
         day: 'numeric',
@@ -283,8 +285,6 @@ function openModalForAdd(date, hour) {
         tripModal = new bootstrap.Modal(document.getElementById("tripModal"));
     }
     tripModal.show();
-    
-    simulateWeatherFetch();
 }
 
 function openModalForEdit(eventData) {
@@ -299,7 +299,6 @@ function openModalForEdit(eventData) {
     document.getElementById("tripCountry").value = eventData.country;
     document.getElementById("tripCity").value = eventData.city;
     document.getElementById("tripCost").value = eventData.cost || "";
-    document.getElementById("tripWeather").value = eventData.weather || "";
     
     // Ustaw kolor
     document.querySelector(`input[name="tripColor"][value="${eventData.type}"]`).checked = true;
@@ -338,7 +337,6 @@ function saveTrip() {
     const country = document.getElementById("tripCountry").value.trim();
     const city = document.getElementById("tripCity").value.trim();
     const cost = document.getElementById("tripCost").value;
-    const weather = document.getElementById("tripWeather").value;
     const color = document.querySelector('input[name="tripColor"]:checked').value;
     
     // Walidacja
@@ -351,8 +349,7 @@ function saveTrip() {
         type: color,
         country: country,
         city: city,
-        cost: cost ? parseFloat(cost) : 0,
-        weather: weather
+        cost: cost ? parseFloat(cost) : 0
     };
     
     if (isEditMode) {
