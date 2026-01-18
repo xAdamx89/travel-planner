@@ -1,0 +1,80 @@
+body {
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    background-color: #3b2a6f;
+    color: white;
+    height: 100vh;
+    width: 220px;
+    padding: 20px;
+}
+
+.sidebar h4 {
+    margin-bottom: 30px;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar li {
+    padding: 10px 0;
+    cursor: pointer;
+    opacity: 0.9;
+}
+
+.sidebar li.active {
+    font-weight: bold;
+    opacity: 1;
+}
+
+/* Calendar layout */
+.calendar {
+    padding: 20px;
+    overflow-x: auto;
+}
+
+.calendar-header {
+    display: grid;
+    grid-template-columns: 80px repeat(6, 1fr);
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: 80px repeat(6, 1fr);
+    grid-template-rows: repeat(8, 80px);
+}
+
+.time {
+    border-top: 1px solid #ddd;
+    padding: 5px;
+    font-size: 0.85rem;
+    color: #555;
+}
+
+.cell {
+    border: 1px solid #eee;
+    position: relative;
+}
+
+.event {
+    position: absolute;
+    inset: 5px;
+    border-radius: 6px;
+    padding: 8px;
+    color: white;
+    font-size: 0.8rem;
+}
+
+.blue { background: #1ea7fd; }
+.pink { background: #ff4da6; }
+.orange { background: #f4a000; }
+.purple { background: #a200ff; }
+.green { background: #00b3a4; }
