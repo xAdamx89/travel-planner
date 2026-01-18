@@ -21,8 +21,10 @@ fetch("partials/calendar.html")
     })
     .then(html => {
         document.getElementById("calendar-container").innerHTML = html;
-        renderCalendar(); // render dopiero po załadowaniu DOM kalendarza
+        renderCalendar();
         attachWeekButtons();
+        attachCellClickHandlers();
+        attachSaveButton();
     })
     .catch(err => console.error("Error loading calendar:", err));
 
@@ -168,6 +170,7 @@ function attachWeekButtons() {
         prevButton.addEventListener("click", () => {
             currentDate.setDate(currentDate.getDate() - 7);
             renderCalendar();
+            attachCellClickHandlers();
         });
     }
     
@@ -175,6 +178,188 @@ function attachWeekButtons() {
         nextButton.addEventListener("click", () => {
             currentDate.setDate(currentDate.getDate() + 7);
             renderCalendar();
+            attachCellClickHandlers();
         });
     }
+}
+
+/***************************
+ * MODAL & TRIP MANAGEMENT
+ ***************************/
+
+let tripModal = null;
+let selectedCell = null;
+
+function attachCellClickHandlers() {
+    const cells = document.querySelectorAll(".cell");
+    
+    cells.forEach(cell => {
+        cell.addEventListener("click", (e) => {
+            // Ignoruj kliknięcie jeśli kliknięto na istniejące wydarzenie
+            if (e.target.classList.contains("event")) {
+                return;
+            }
+            
+            selectedCell = cell;
+            const date = cell.dataset.date;
+            const hour = cell.dataset.hour;
+            
+            // Ustaw wartości w formularzu
+            document.getElementById("tripDate").value = date;
+            document.getElementById("tripHour").value = hour;
+            
+            // Wyczyść formularz
+            document.getElementById("tripForm").reset();
+            document.getElementById("tripDate").value = date;
+            document.getElementById("tripHour").value = hour;
+            
+            // Ustaw placeholder pogody
+            document.getElementById("tripWeather").value = "Ładowanie...";
+            document.getElementById("weatherIcon").textContent = "🔄";
+            
+            // Aktualizuj tytuł modalu z datą i godziną
+            const formattedDate = new Date(date).toLocaleDateString("pl-PL", {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+            document.getElementById("tripModalLabel").textContent = 
+                `✈️ Dodaj wycieczkę - ${formattedDate}, ${hour}`;
+            
+            // Otwórz modal
+            if (!tripModal) {
+                tripModal = new bootstrap.Modal(document.getElementById("tripModal"));
+            }
+            tripModal.show();
+            
+            // Symulacja ładowania pogody (placeholder do późniejszego uzupełnienia)
+            simulateWeatherFetch();
+        });
+    });
+}
+
+function simulateWeatherFetch() {
+    // TODO: Tu później dodać prawdziwe API pogodowe
+    // Na razie symulacja z placeholder
+    setTimeout(() => {
+        const weatherIcon = document.getElementById("weatherIcon");
+        const weatherInput = document.getElementById("tripWeather");
+        
+        // Placeholder - do uzupełnienia prawdziwym API
+        weatherInput.value = "-- °C (uzupełnij później)";
+        weatherIcon.textContent = "🌡️";
+    }, 500);
+}
+
+function attachSaveButton() {
+    const saveBtn = document.getElementById("saveTripBtn");
+    
+    if (saveBtn) {
+        saveBtn.addEventListener("click", saveTrip);
+    }
+}
+
+function saveTrip() {
+    const date = document.getElementById("tripDate").value;
+    const hour = document.getElementById("tripHour").value;
+    const country = document.getElementById("tripCountry").value.trim();
+    const city = document.getElementById("tripCity").value.trim();
+    const cost = document.getElementById("tripCost").value;
+    const weather = document.getElementById("tripWeather").value;
+    const color = document.querySelector('input[name="tripColor"]:checked').value;
+    
+    // Walidacja
+    if (!country || !city) {
+        alert("Proszę wypełnić kraj i miasto!");
+        return;
+    }
+    
+    // Utwórz obiekt wydarzenia
+    const newEvent = {
+        type: color,
+        text: `${city}<br>${country}`,
+        country: country,
+        city: city,
+        cost: cost ? parseFloat(cost) : 0,
+        weather: weather
+    };
+    
+    // Dodaj do danych wydarzeń
+    if (!eventsData[date]) {
+        eventsData[date] = {};
+    }
+    if (!eventsData[date][hour]) {
+        eventsData[date][hour] = [];
+    }
+    eventsData[date][hour].push(newEvent);
+    
+    // Zapisz do localStorage
+    saveEventsToStorage();
+    
+    // Zamknij modal i odśwież kalendarz
+    tripModal.hide();
+    renderCalendar();
+    attachCellClickHandlers();
+    
+    // Pokaż potwierdzenie
+    showToast(`Wycieczka do ${city}, ${country} została dodana!`);
+}
+
+/***************************
+ * LOCAL STORAGE
+ ***************************/
+
+function saveEventsToStorage() {
+    localStorage.setItem("travelPlannerEvents", JSON.stringify(eventsData));
+}
+
+function loadEventsFromStorage() {
+    const stored = localStorage.getItem("travelPlannerEvents");
+    if (stored) {
+        const parsed = JSON.parse(stored);
+        Object.assign(eventsData, parsed);
+    }
+}
+
+// Załaduj zapisane wydarzenia przy starcie
+loadEventsFromStorage();
+
+/***************************
+ * TOAST NOTIFICATIONS
+ ***************************/
+
+function showToast(message) {
+    // Utwórz toast container jeśli nie istnieje
+    let toastContainer = document.getElementById("toast-container");
+    if (!toastContainer) {
+        toastContainer = document.createElement("div");
+        toastContainer.id = "toast-container";
+        toastContainer.className = "toast-container position-fixed bottom-0 end-0 p-3";
+        document.body.appendChild(toastContainer);
+    }
+    
+    // Utwórz toast
+    const toastId = "toast-" + Date.now();
+    const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-bg-success border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ✅ ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    toastContainer.insertAdjacentHTML("beforeend", toastHtml);
+    
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+    toast.show();
+    
+    // Usuń element po ukryciu
+    toastElement.addEventListener("hidden.bs.toast", () => {
+        toastElement.remove();
+    });
 }
