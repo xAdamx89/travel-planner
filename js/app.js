@@ -5,10 +5,8 @@ fetch("partials/tripModal.html")
     .then(res => res.text())
     .then(html => {
         document.getElementById("tripModalContainer").innerHTML = html;
-        // Po wczytaniu modalu możesz już go używać
-        attachSaveButton(); // przypnij eventy przycisków
-    })
-    .catch(err => console.error("Error loading modal:", err));
+        attachSaveButton();
+    });
 
 fetch("partials/sidebar.html")
     .then(res => res.text())
@@ -18,20 +16,41 @@ fetch("partials/calendar.html")
     .then(res => res.text())
     .then(html => {
         document.getElementById("calendar-container").innerHTML = html;
-
-        renderCalendar();          // rysowanie nagłówka i siatki
-        attachWeekButtons();       // przypięcie przycisków prev/next
-        attachCellClickHandlers(); // przypięcie kliknięć w komórki
-        attachSaveButton();        // przypięcie przycisku zapisu modal
+        renderCalendar();
+        attachWeekButtons();
+        attachCellClickHandlers();
     });
 
+/***************************
+ * WEATHER API
+ ***************************/
+const WEATHER_API_KEY = "93804964d91b0bb37fb9dd91fe5f92e3";
+
+async function fetchWeatherForCity(city) {
+    try {
+        const res = await fetch(
+            `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&lang=pl&appid=${WEATHER_API_KEY}`
+        );
+
+        if (!res.ok) throw new Error("Weather fetch failed");
+
+        const data = await res.json();
+
+        return {
+            temp: Math.round(data.main.temp),
+            description: data.weather[0].description,
+            icon: data.weather[0].icon
+        };
+    } catch (err) {
+        console.error("Weather error:", err);
+        return null;
+    }
+}
 
 /***************************
  * DATE LOGIC
  ***************************/
-
 let currentDate = new Date();
-
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 function getMonday(date) {
@@ -42,124 +61,88 @@ function getMonday(date) {
 }
 
 function formatDate(date) {
-    return date.toLocaleDateString("pl-PL", {
-        day: "2-digit",
-        month: "2-digit"
-    });
+    return date.toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit" });
 }
 
 /***************************
  * EVENTS DATA
  ***************************/
-
-// Przykładowe wydarzenia - możesz rozbudować lub załadować z API
-const eventsData = {
-    "2024-01-15": {
-        "9:00": [{ type: "blue", text: "Flight<br>Rome" }],
-        "10:00": [{ type: "pink", text: "City Walk" }]
-    },
-    "2024-01-16": {
-        "9:00": [{ type: "orange", text: "Hotel<br>Check-in" }],
-        "11:00": [{ type: "purple", text: "Lunch" }],
-        "13:00": [{ type: "green", text: "Beach" }]
-    },
-    "2024-01-17": {
-        "9:00": [{ type: "blue", text: "Flight<br>Paris" }],
-        "10:00": [{ type: "pink", text: "Museum" }]
-    },
-    "2024-01-18": {
-        "9:00": [{ type: "orange", text: "Tour" }],
-        "11:00": [{ type: "purple", text: "Lunch" }]
-    },
-    "2024-01-19": {
-        "11:00": [{ type: "purple", text: "Lunch" }]
-    }
-};
+const eventsData = {};
 
 function getEventsForDate(dateStr, hour) {
-    if (eventsData[dateStr] && eventsData[dateStr][hour]) {
-        return eventsData[dateStr][hour];
-    }
-    return [];
+    return eventsData[dateStr]?.[hour] || [];
 }
 
 /***************************
- * RENDER FUNCTIONS
+ * RENDER
  ***************************/
-
 function renderHeader() {
     const header = document.getElementById("calendar-header");
     if (!header) return;
-    
-    header.innerHTML = "<div></div>";
 
+    header.innerHTML = "<div></div>";
     const monday = getMonday(currentDate);
 
-    days.forEach((day, index) => {
-        const date = new Date(monday);
-        date.setDate(monday.getDate() + index);
-
+    days.forEach((day, i) => {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
         header.innerHTML += `
             <div class="text-center">
-                ${day}<br>
-                <small>${formatDate(date)}</small>
+                ${day}<br><small>${formatDate(d)}</small>
             </div>
         `;
     });
 
     const saturday = new Date(monday);
     saturday.setDate(monday.getDate() + 5);
-
-    const currentWeekElement = document.getElementById("currentWeek");
-    if (currentWeekElement) {
-        currentWeekElement.innerText = `${formatDate(monday)} – ${formatDate(saturday)}`;
-    }
+    document.getElementById("currentWeek").innerText =
+        `${formatDate(monday)} – ${formatDate(saturday)}`;
 }
 
 function renderGrid() {
     const grid = document.getElementById("calendar-grid");
     if (!grid) return;
-    
-    grid.innerHTML = "";
 
-    const hours = ["9:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00"];
+    grid.innerHTML = "";
+    const hours = ["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00"];
     const monday = getMonday(currentDate);
 
     hours.forEach(hour => {
+        // Kolumna czasu
         grid.innerHTML += `<div class="time">${hour}</div>`;
 
         for (let i = 0; i < 6; i++) {
-            const date = new Date(monday);
-            date.setDate(monday.getDate() + i);
-            const dateStr = date.toISOString().split('T')[0];
-            
+            const d = new Date(monday);
+            d.setDate(monday.getDate() + i);
+            const dateStr = d.toISOString().split("T")[0];
+
             const events = getEventsForDate(dateStr, hour);
             let eventsHtml = "";
-            
-        events.forEach((event, index) => {
-            const displayText = `
-                ${event.city}<br>
-                ${event.country}
-                ${event.cost ? `<br>${event.cost} PLN` : ''}
-            `;
 
-            eventsHtml += `
-                <div class="event ${event.type}" data-event-index="${index}">
-                    ${displayText}
-                </div>
-            `;
-        });
+            events.forEach((e, idx) => {
+                eventsHtml += `
+                    <div class="event ${e.type}" data-event-index="${idx}">
+                        <div class="event-title">${e.city}, ${e.country}</div>
+                        ${e.cost ? `<div class="event-cost">${e.cost} PLN</div>` : ""}
+                        ${e.weather ? `
+                            <div class="event-weather">
+                                🌡️ ${e.weather.temp}°C
+                                <small>${e.weather.description}</small>
+                            </div>
+                        ` : ""}
+                    </div>
+                `;
+            });
 
             grid.innerHTML += `
-                <div class="cell"
-                     data-date="${dateStr}"
-                     data-hour="${hour}">
+                <div class="cell" data-date="${dateStr}" data-hour="${hour}">
                     ${eventsHtml}
                 </div>
             `;
         }
     });
 }
+
 
 function renderCalendar() {
     renderHeader();
@@ -169,291 +152,130 @@ function renderCalendar() {
 /***************************
  * WEEK NAVIGATION
  ***************************/
-
 function attachWeekButtons() {
-    const prevButton = document.getElementById("prevWeek");
-    const nextButton = document.getElementById("nextWeek");
-    
-    if (prevButton) {
-        prevButton.addEventListener("click", () => {
-            currentDate.setDate(currentDate.getDate() - 7);
-            renderCalendar();
-            attachCellClickHandlers();
-        });
-    }
-    
-    if (nextButton) {
-        nextButton.addEventListener("click", () => {
-            currentDate.setDate(currentDate.getDate() + 7);
-            renderCalendar();
-            attachCellClickHandlers();
-        });
-    }
+    document.getElementById("prevWeek")?.addEventListener("click", () => {
+        currentDate.setDate(currentDate.getDate() - 7);
+        renderCalendar();
+        attachCellClickHandlers();
+    });
+
+    document.getElementById("nextWeek")?.addEventListener("click", () => {
+        currentDate.setDate(currentDate.getDate() + 7);
+        renderCalendar();
+        attachCellClickHandlers();
+    });
 }
 
 /***************************
- * MODAL & TRIP MANAGEMENT
+ * MODAL LOGIC
  ***************************/
-
 let tripModal = null;
-let selectedCell = null;
 let isEditMode = false;
-let editDate = '';
-let editHour = '';
+let editDate = "";
+let editHour = "";
 let editIndex = -1;
 
 function attachCellClickHandlers() {
-    const cells = document.querySelectorAll(".cell");
-    
-    cells.forEach(cell => {
-        cell.addEventListener("click", (e) => {
+    document.querySelectorAll(".cell").forEach(cell => {
+        cell.addEventListener("click", e => {
             if (e.target.classList.contains("event")) {
-                // Tryb edycji - kliknięto istniejący event
-                handleEventClick(e.target);
-                return;
+                openEdit(cell, e.target.dataset.eventIndex);
+            } else {
+                openAdd(cell.dataset.date, cell.dataset.hour);
             }
-            
-            // Tryb dodawania - pusta komórka
-            handleCellClick(cell);
         });
     });
 }
 
-function handleCellClick(cell) {
-    selectedCell = cell;
-    const date = cell.dataset.date;
-    const hour = cell.dataset.hour;
-    
-    openModalForAdd(date, hour);
-}
-
-function handleEventClick(eventEl) {
-    const cell = eventEl.closest('.cell');
-    editDate = cell.dataset.date;
-    editHour = cell.dataset.hour;
-    editIndex = parseInt(eventEl.dataset.eventIndex);
-    
-    const eventData = getEventData(editDate, editHour, editIndex);
-    if (!eventData) return;
-    
-    openModalForEdit(eventData);
-}
-
-// function simulateWeatherFetch() {
-//     // TODO: Tu później dodać prawdziwe API pogodowe
-//     // Na razie symulacja z placeholder
-//     // setTimeout(() => {
-//     //     const weatherIcon = document.getElementById("weatherIcon");
-//     //     const weatherInput = document.getElementById("tripWeather");
-        
-//     //     // Placeholder - do uzupełnienia prawdziwym API
-//     //     weatherInput.value = "-- °C (uzupełnij później)";
-//     //     weatherIcon.textContent = "🌡️";
-//     // }, 500);
-// }
-
-function getEventData(dateStr, hour, index) {
-    if (eventsData[dateStr] && eventsData[dateStr][hour] && eventsData[dateStr][hour][index]) {
-        return eventsData[dateStr][hour][index];
-    }
-    return null;
-}
-
-function openModalForAdd(date, hour) {
+function openAdd(date, hour) {
     isEditMode = false;
-    document.getElementById("editMode").value = "0";
-    document.getElementById("eventIndex").value = "";
-    document.getElementById("deleteTripBtn").style.display = "none";
-    
-    document.getElementById("tripDate").value = date;
-    document.getElementById("tripHour").value = hour;
-    
     document.getElementById("tripForm").reset();
     document.getElementById("tripDate").value = date;
     document.getElementById("tripHour").value = hour;
-    
-    const formattedDate = new Date(date).toLocaleDateString("pl-PL", {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    });
-    document.getElementById("tripModalLabel").textContent = 
-        `✈️ Dodaj wycieczkę - ${formattedDate}, ${hour}`;
-    
-    if (!tripModal) {
-        tripModal = new bootstrap.Modal(document.getElementById("tripModal"));
-    }
-    tripModal.show();
+    document.getElementById("deleteTripBtn").style.display = "none";
+
+    showModal(`✈️ Dodaj wycieczkę - ${date}, ${hour}`);
 }
 
-function openModalForEdit(eventData) {
+function openEdit(cell, index) {
     isEditMode = true;
-    document.getElementById("editMode").value = "1";
-    document.getElementById("eventIndex").value = editIndex;
-    document.getElementById("deleteTripBtn").style.display = "inline-block";
-    
+    editDate = cell.dataset.date;
+    editHour = cell.dataset.hour;
+    editIndex = index;
+
+    const ev = eventsData[editDate][editHour][index];
+
     document.getElementById("tripDate").value = editDate;
     document.getElementById("tripHour").value = editHour;
-    
-    document.getElementById("tripCountry").value = eventData.country;
-    document.getElementById("tripCity").value = eventData.city;
-    document.getElementById("tripCost").value = eventData.cost || "";
-    
-    // Ustaw kolor
-    document.querySelector(`input[name="tripColor"][value="${eventData.type}"]`).checked = true;
-    
-    const formattedDate = new Date(editDate).toLocaleDateString("pl-PL", {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    });
-    document.getElementById("tripModalLabel").textContent = 
-        `✈️ Edytuj wycieczkę - ${formattedDate}, ${editHour}`;
-    
-    if (!tripModal) {
-        tripModal = new bootstrap.Modal(document.getElementById("tripModal"));
-    }
+    document.getElementById("tripCountry").value = ev.country;
+    document.getElementById("tripCity").value = ev.city;
+    document.getElementById("tripCost").value = ev.cost || "";
+    document.querySelector(`input[value="${ev.type}"]`).checked = true;
+    document.getElementById("deleteTripBtn").style.display = "inline-block";
+
+    showModal(`✈️ Edytuj wycieczkę - ${editDate}, ${editHour}`);
+}
+
+function showModal(title) {
+    document.getElementById("tripModalLabel").textContent = title;
+    if (!tripModal) tripModal = new bootstrap.Modal(document.getElementById("tripModal"));
     tripModal.show();
 }
 
+/***************************
+ * SAVE / DELETE
+ ***************************/
 function attachSaveButton() {
-    const saveBtn = document.getElementById("saveTripBtn");
-    const deleteBtn = document.getElementById("deleteTripBtn");
-    
-    if (saveBtn) {
-        saveBtn.addEventListener("click", saveTrip);
-    }
-    
-    if (deleteBtn) {
-        deleteBtn.addEventListener("click", deleteTrip);
-    }
+    document.getElementById("saveTripBtn")?.addEventListener("click", saveTrip);
+    document.getElementById("deleteTripBtn")?.addEventListener("click", deleteTrip);
 }
 
-function saveTrip() {
-    const date = document.getElementById("tripDate").value;
-    const hour = document.getElementById("tripHour").value;
-    const country = document.getElementById("tripCountry").value.trim();
-    const city = document.getElementById("tripCity").value.trim();
-    const cost = document.getElementById("tripCost").value;
-    const color = document.querySelector('input[name="tripColor"]:checked').value;
-    
-    // Walidacja
-    if (!country || !city) {
-        alert("Proszę wypełnić kraj i miasto!");
-        return;
-    }
-    
-    const eventData = {
-        type: color,
-        country: country,
-        city: city,
-        cost: cost ? parseFloat(cost) : 0
-    };
-    
+async function saveTrip() {
+    const date = tripDate.value;
+    const hour = tripHour.value;
+    const country = tripCountry.value.trim();
+    const city = tripCity.value.trim();
+    const cost = parseFloat(tripCost.value) || 0;
+    const type = document.querySelector('input[name="tripColor"]:checked').value;
+
+    if (!country || !city) return alert("Uzupełnij kraj i miasto");
+
+    let weather = null;
+
     if (isEditMode) {
-        // Edycja
-        if (!eventsData[date]) eventsData[date] = {};
-        if (!eventsData[date][hour]) eventsData[date][hour] = [];
-        eventsData[date][hour][editIndex] = eventData;
-        showToast(`Wycieczka do ${city}, ${country} została zaktualizowana!`);
+        const old = eventsData[date][hour][editIndex];
+        weather = old.city === city ? old.weather : await fetchWeatherForCity(city);
+        eventsData[date][hour][editIndex] = { type, country, city, cost, weather };
     } else {
-        // Dodawanie
-        if (!eventsData[date]) eventsData[date] = {};
-        if (!eventsData[date][hour]) eventsData[date][hour] = [];
-        eventsData[date][hour].push(eventData);
-        showToast(`Wycieczka do ${city}, ${country} została dodana!`);
+        weather = await fetchWeatherForCity(city);
+        eventsData[date] ??= {};
+        eventsData[date][hour] ??= [];
+        eventsData[date][hour].push({ type, country, city, cost, weather });
     }
-    
-    // Zapisz do localStorage
+
     saveEventsToStorage();
-    
-    // Zamknij modal i odśwież
     tripModal.hide();
     renderCalendar();
     attachCellClickHandlers();
-    attachSaveButton();
 }
 
 function deleteTrip() {
-    if (confirm("Na pewno usunąć tę wycieczkę?")) {
-        if (eventsData[editDate] && eventsData[editDate][editHour]) {
-            eventsData[editDate][editHour].splice(editIndex, 1);
-            
-            // Usuń puste obiekty
-            if (eventsData[editDate][editHour].length === 0) {
-                delete eventsData[editDate][editHour];
-            }
-            if (Object.keys(eventsData[editDate]).length === 0) {
-                delete eventsData[editDate];
-            }
-        }
-        
-        saveEventsToStorage();
-        tripModal.hide();
-        renderCalendar();
-        attachCellClickHandlers();
-        attachSaveButton();
-        
-        showToast("Wycieczka została usunięta!");
-    }
+    if (!confirm("Usunąć wycieczkę?")) return;
+    eventsData[editDate][editHour].splice(editIndex, 1);
+    saveEventsToStorage();
+    tripModal.hide();
+    renderCalendar();
+    attachCellClickHandlers();
 }
 
 /***************************
  * LOCAL STORAGE
  ***************************/
-
 function saveEventsToStorage() {
     localStorage.setItem("travelPlannerEvents", JSON.stringify(eventsData));
 }
 
-function loadEventsFromStorage() {
-    const stored = localStorage.getItem("travelPlannerEvents");
-    if (stored) {
-        const parsed = JSON.parse(stored);
-        Object.assign(eventsData, parsed);
-    }
-}
-
-// Załaduj zapisane wydarzenia przy starcie
-loadEventsFromStorage();
-
-/***************************
- * TOAST NOTIFICATIONS
- ***************************/
-
-function showToast(message) {
-    // Utwórz toast container jeśli nie istnieje
-    let toastContainer = document.getElementById("toast-container");
-    if (!toastContainer) {
-        toastContainer = document.createElement("div");
-        toastContainer.id = "toast-container";
-        toastContainer.className = "toast-container position-fixed bottom-0 end-0 p-3";
-        document.body.appendChild(toastContainer);
-    }
-    
-    // Utwórz toast
-    const toastId = "toast-" + Date.now();
-    const toastHtml = `
-        <div id="${toastId}" class="toast align-items-center text-bg-success border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body">
-                    ✅ ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    `;
-    
-    toastContainer.insertAdjacentHTML("beforeend", toastHtml);
-    
-    const toastElement = document.getElementById(toastId);
-    const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
-    toast.show();
-    
-    // Usuń element po ukryciu
-    toastElement.addEventListener("hidden.bs.toast", () => {
-        toastElement.remove();
-    });
-}
+(function load() {
+    const data = localStorage.getItem("travelPlannerEvents");
+    if (data) Object.assign(eventsData, JSON.parse(data));
+})();

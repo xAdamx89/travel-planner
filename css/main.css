@@ -193,5 +193,30 @@ body {
     overflow-x: auto;
 }
 
-/* … reszta Twojego CSS … */
+.event {
+    padding: 6px;
+    font-size: 13px;
+    line-height: 1.2;
+    overflow: visible;
+}
+
+.event-title {
+    font-weight: bold;
+}
+
+.event-cost {
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.event-weather {
+    font-size: 11px;
+    opacity: 0.9;
+    margin-top: 4px;
+}
+
+.event-weather small {
+    display: block;
+    font-size: 10px;
+}
 
