@@ -2,7 +2,7 @@
 <div class="calendar flex-grow-1">
 
     <!-- Week navigation -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="calendar-nav d-flex justify-content-between align-items-center px-3 py-2">
         <button id="prevWeek" class="btn btn-outline-secondary btn-sm">
             ← Previous
         </button>
@@ -14,19 +14,27 @@
         </button>
     </div>
 
-
+    <!-- Calendar header (sticky) -->
     <div id="calendar-header" class="calendar-header">
-        <div></div>
-        <div>Monday</div>
-        <div>Tuesday</div>
-        <div>Wednesday</div>
-        <div>Thursday</div>
-        <div>Friday</div>
-        <div>Saturday</div>
+        <div class="time-header"></div>
+        <div class="day-header">Monday</div>
+        <div class="day-header">Tuesday</div>
+        <div class="day-header">Wednesday</div>
+        <div class="day-header">Thursday</div>
+        <div class="day-header">Friday</div>
+        <div class="day-header">Saturday</div>
     </div>
 
-    <div id="calendar-grid" class="calendar-grid">
-        <!-- Dynamicznie generowana zawartość -->
+    <!-- Scrollable body -->
+    <div class="calendar-body">
+        <div id="calendar-grid" class="calendar-grid">
+            <!-- Dynamicznie generowana zawartość -->
+        </div>
+    </div>
+
+    <!-- Total cost -->
+    <div id="total-cost" class="calendar-total p-2 text-end fw-bold">
+        Suma wszystkich wycieczek: 0 PLN
     </div>
 
 </div>

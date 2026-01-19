@@ -61,6 +61,10 @@ function loadFromStorage() {
 }
 loadFromStorage();
 store.subscribe(saveToStorage);
+store.subscribe(() => {
+    renderCalendar();
+    attachCellClickHandlers();
+});
 
 /***************************
  * WEATHER API
@@ -82,7 +86,7 @@ async function fetchWeatherForCity(city) {
  * DATE LOGIC
  ***************************/
 let currentDate = new Date();
-const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const days = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota"];
 function getMonday(date) {
     const d = new Date(date);
     const day = d.getDay();
@@ -131,12 +135,18 @@ function renderGrid() {
 
             const events = stateEvents[dateStr]?.[hour] || [];
             let html = "";
-            events.forEach((e,idx)=>{
+            events.forEach((e, idx) => {
                 html += `
                     <div class="event ${e.type}" data-event-index="${idx}">
-                        <div class="event-title">${e.city}, ${e.country}</div>
-                        ${e.cost ? `<div class="event-cost">${e.cost} PLN</div>` : ""}
-                        ${e.weather ? `<div class="event-weather">🌡️ ${e.weather.temp}°C<br><small>${e.weather.description}</small></div>` : ""}
+                        <div class="event-content">
+                            <div class="event-title">${e.city}, ${e.country}</div>
+                            ${e.cost ? `<div class="event-cost">${e.cost} PLN</div>` : ""}
+                            ${e.weather ? `
+                                <div class="event-weather" title="${e.weather.description}">
+                                    🌡️ ${e.weather.temp}°C
+                                </div>
+                            ` : ""}
+                        </div>
                     </div>
                 `;
             });
@@ -253,9 +263,6 @@ async function saveTrip() {
         store.dispatch(setEvent({ date, hour, eventData }));
     }
 
-    renderCalendar();
-    attachCellClickHandlers();
-
     tripModal.hide();
 }
 
@@ -268,9 +275,6 @@ function deleteTrip() {
         hour: editHour,
         index: editIndex
     }));
-
-    renderCalendar();
-    attachCellClickHandlers();
 
     tripModal.hide();
 }
