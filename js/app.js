@@ -251,14 +251,13 @@ async function saveTrip() {
     const city = document.getElementById("tripCity").value.trim();
     const cost = parseFloat(document.getElementById("tripCost").value || 0);
     const color = document.querySelector('input[name="tripColor"]:checked').value;
-    const tripWeather = document.getElementById("tripWeather").value.trim(); // <-- pobranie pogody
+    const tripWeather = document.getElementById("tripWeather").value.trim();
 
     if (!country || !city) {
         alert("Proszę wypełnić zdarzenie i opis!");
         return;
     }
 
-    // Nie wywołujemy API, zapisujemy pogode jako zwykły tekst
     const eventData = { country, city, cost, type: color, tripWeather };
 
     if (isEditMode) {
