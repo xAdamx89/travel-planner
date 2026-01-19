@@ -141,6 +141,7 @@ function renderGrid() {
                         <div class="event-content">
                             <div class="event-title">${e.city}, ${e.country}</div>
                             ${e.cost ? `<div class="event-cost">${e.cost} PLN</div>` : ""}
+                            ${e.tripWeather ? `<div class="event-text">${e.tripWeather}</div>` : ""}
                             ${e.weather ? `
                                 <div class="event-weather" title="${e.weather.description}">
                                     Aktualna pogoda: 🌡️ ${e.weather.temp}°C<br><small>${e.weather.description}</small>
@@ -200,11 +201,12 @@ function attachCellClickHandlers() {
 
 
 function openAdd(date,hour){
-    isEditMode=false;
+    isEditMode = false;
     document.getElementById("tripForm").reset();
-    document.getElementById("tripDate").value=date;
-    document.getElementById("tripHour").value=hour;
-    document.getElementById("deleteTripBtn").style.display="none";
+    document.getElementById("tripDate").value = date;
+    document.getElementById("tripHour").value = hour;
+    document.getElementById("tripWeather").value = ""; // <-- reset pogody
+    document.getElementById("deleteTripBtn").style.display = "none";
     showModal(`Dodaj zdarzenie - ${date}, ${hour}`);
 }
 
@@ -219,6 +221,7 @@ function openEdit(cell,index){
     document.getElementById("tripCountry").value=ev.country;
     document.getElementById("tripCity").value=ev.city;
     document.getElementById("tripCost").value=ev.cost||"";
+    document.getElementById("tripWeather").value=ev.tripWeather||"";
     document.querySelector(`input[value="${ev.type}"]`).checked=true;
     document.getElementById("deleteTripBtn").style.display="inline-block";
     showModal(`Edytuj zdarzenie - ${editDate}, ${editHour}`);
@@ -248,14 +251,15 @@ async function saveTrip() {
     const city = document.getElementById("tripCity").value.trim();
     const cost = parseFloat(document.getElementById("tripCost").value || 0);
     const color = document.querySelector('input[name="tripColor"]:checked').value;
+    const tripWeather = document.getElementById("tripWeather").value.trim(); // <-- pobranie pogody
 
     if (!country || !city) {
         alert("Proszę wypełnić zdarzenie i opis!");
         return;
     }
 
-    const weather = await fetchWeatherForCity(city);
-    const eventData = { country, city, cost, type: color, weather };
+    // Nie wywołujemy API, zapisujemy pogode jako zwykły tekst
+    const eventData = { country, city, cost, type: color, tripWeather };
 
     if (isEditMode) {
         store.dispatch(setEvent({ date, hour, index: editIndex, eventData }));
@@ -265,6 +269,7 @@ async function saveTrip() {
 
     tripModal.hide();
 }
+
 
 
 function deleteTrip() {
