@@ -41,66 +41,111 @@
             <input type="text" id="cityInput" class="form-control" placeholder="Wpisz miasto">
         </div>
 
-        <button id="checkWeatherBtn" class="btn btn-primary mb-3">Sprawdź pogodę</button>
+        <div class="mb-3" style="max-width: 400px;">
+            <input type="date" id="dateInput" class="form-control">
+        </div>
+
+        <button id="checkWeatherBtn" class="btn btn-primary mb-3">
+            Sprawdź pogodę
+        </button>
 
         <div id="weatherResults" style="max-width: 600px;"></div>
     </div>
 </div>
 
 <script type="module">
-    const WEATHER_API_KEY = "93804964d91b0bb37fb9dd91fe5f92e3";
+const WEATHER_API_KEY = "93804964d91b0bb37fb9dd91fe5f92e3";
 
-    async function fetchWeather(city) {
-        try {
-            const geoRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)}&limit=1&appid=${WEATHER_API_KEY}`);
-            const geoData = await geoRes.json();
-            if (!geoData.length) throw new Error("Nie znaleziono miasta");
+/* ===== DATE LIMITS FOR FREE API ===== */
+const dateInput = document.getElementById("dateInput");
 
-            const { lat, lon } = geoData[0];
+const today = new Date();
+const maxDate = new Date();
+maxDate.setDate(today.getDate() + 5);
 
-            const res = await fetch(`https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly,alerts&units=metric&lang=pl&appid=${WEATHER_API_KEY}`);
-            const data = await res.json();
-            return data.daily;
-        } catch (err) {
-            console.error(err);
-            alert(err.message);
-            return [];
-        }
+// format YYYY-MM-DD
+const formatDate = d => d.toISOString().split("T")[0];
+
+dateInput.min = formatDate(today);
+dateInput.max = formatDate(maxDate);
+dateInput.value = formatDate(today);
+
+
+
+/* ===== FETCH FORECAST 5-DAY ===== */
+async function fetchForecast(city) {
+    const res = await fetch(
+        `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&units=metric&lang=pl&appid=${WEATHER_API_KEY}`
+    );
+
+    if (!res.ok) {
+        throw new Error("Błąd pobierania prognozy");
     }
 
-    function renderWeather(daily) {
-        const container = document.getElementById("weatherResults");
-        container.innerHTML = "";
+    return await res.json();
+}
 
-        daily.forEach(day => {
-            const date = new Date(day.dt * 1000);
-            container.innerHTML += `
-                <div class="card mb-2">
-                    <div class="card-body d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong>${date.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'numeric' })}</strong>
-                            <div>${day.weather[0].description}</div>
-                        </div>
-                        <div>
-                            🌡️ ${Math.round(day.temp.day)}°C
-                        </div>
+/* ===== FILTER BY DATE ===== */
+function getForecastForDate(forecastData, selectedDate) {
+    return forecastData.list.filter(item =>
+        item.dt_txt.startsWith(selectedDate)
+    );
+}
+
+/* ===== RENDER RESULT ===== */
+function renderWeather(city, date, forecasts) {
+    const container = document.getElementById("weatherResults");
+    container.innerHTML = "";
+
+    if (forecasts.length === 0) {
+        container.innerHTML = `<div class="alert alert-warning">
+            Brak danych pogodowych dla tego dnia (API obsługuje ~5 dni).
+        </div>`;
+        return;
+    }
+
+    forecasts.forEach(item => {
+        container.innerHTML += `
+            <div class="card mb-2">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${new Date(item.dt * 1000)
+                            .toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}</strong>
+                        <div>${item.weather[0].description}</div>
+                    </div>
+                    <div>
+                        🌡️ ${Math.round(item.main.temp)}°C
                     </div>
                 </div>
-            `;
-        });
+            </div>
+        `;
+    });
+}
+
+/* ===== BUTTON ===== */
+document.getElementById("checkWeatherBtn").addEventListener("click", async () => {
+    const city = document.getElementById("cityInput").value.trim();
+    const date = document.getElementById("dateInput").value;
+
+    if (!city || !date) {
+        alert("Podaj miasto i datę");
+        return;
     }
 
-    document.getElementById("checkWeatherBtn").addEventListener("click", async () => {
-        const city = document.getElementById("cityInput").value.trim();
-        if (!city) return alert("Podaj miasto");
-        const daily = await fetchWeather(city);
-        renderWeather(daily);
-    });
+    try {
+        const forecastData = await fetchForecast(city);
+        const dayForecast = getForecastForDate(forecastData, date);
+        renderWeather(city, date, dayForecast);
+    } catch (err) {
+        alert(err.message);
+        console.error(err);
+    }
+});
 
-    // Sidebar
-    fetch("partials/sidebar.html")
-        .then(r => r.text())
-        .then(html => document.getElementById("sidebar-container").innerHTML = html);
+/* ===== SIDEBAR ===== */
+fetch("partials/sidebar.html")
+    .then(r => r.text())
+    .then(html => document.getElementById("sidebar-container").innerHTML = html);
 </script>
 </body>
 </html>
