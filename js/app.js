@@ -143,7 +143,7 @@ function renderGrid() {
                             ${e.cost ? `<div class="event-cost">${e.cost} PLN</div>` : ""}
                             ${e.weather ? `
                                 <div class="event-weather" title="${e.weather.description}">
-                                    🌡️ ${e.weather.temp}°C
+                                    Aktualna pogoda: 🌡️ ${e.weather.temp}°C<br><small>${e.weather.description}</small>
                                 </div>
                             ` : ""}
                         </div>
@@ -205,7 +205,7 @@ function openAdd(date,hour){
     document.getElementById("tripDate").value=date;
     document.getElementById("tripHour").value=hour;
     document.getElementById("deleteTripBtn").style.display="none";
-    showModal(`✈️ Dodaj wycieczkę - ${date}, ${hour}`);
+    showModal(`Dodaj zdarzenie - ${date}, ${hour}`);
 }
 
 function openEdit(cell,index){
@@ -221,7 +221,7 @@ function openEdit(cell,index){
     document.getElementById("tripCost").value=ev.cost||"";
     document.querySelector(`input[value="${ev.type}"]`).checked=true;
     document.getElementById("deleteTripBtn").style.display="inline-block";
-    showModal(`✈️ Edytuj wycieczkę - ${editDate}, ${editHour}`);
+    showModal(`Edytuj zdarzenie - ${editDate}, ${editHour}`);
 }
 
 function showModal(title) {
@@ -250,7 +250,7 @@ async function saveTrip() {
     const color = document.querySelector('input[name="tripColor"]:checked').value;
 
     if (!country || !city) {
-        alert("Proszę wypełnić kraj i miasto!");
+        alert("Proszę wypełnić zdarzenie i opis!");
         return;
     }
 
